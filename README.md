@@ -65,5 +65,5 @@ Feel free to submit pull requests and contribute to the project.
 MIT License
 
 ## Contact
-For queries or support, contact [Your Name] at [Your Email].
+For queries or support, contact [Muhammad Yousif] at [hellomyousif@gmail.com].
 
