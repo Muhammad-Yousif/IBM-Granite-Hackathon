@@ -1,3 +1,6 @@
+__import__('pysqlite3')
+import sys
+sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import pandas as pd
 import chromadb
@@ -14,7 +17,7 @@ wml_credentials = {
     "url": "https://us-south.ml.cloud.ibm.com",
     "apikey": "api_key"
 }
-model = ModelInference(api_key=wml_credentials["apikey"], project_id="your_project_id")
+model = ModelInference(credentials=wml_credentials, project_id="project_id",model_id="model_id")
 
 # ChromaDB Setup
 chroma_client = chromadb.PersistentClient(path="./chromadb_store")
