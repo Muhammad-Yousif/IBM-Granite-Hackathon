@@ -6,15 +6,25 @@ import os
 from langgraph.graph import StateGraph
 from ibm_watson_machine_learning.foundation_models import ModelInference
 from fpdf import FPDF
+from ibm_watsonx_ai import Credentials
 
 ##########################################################
 #############    PUT API KEY HERE     ####################
 ##########################################################
+
 wml_credentials = {
-    "url": "https://eu-de.ml.cloud.ibm.com",
-    "apikey": "LJbZPxwGd6tVgUfD8A8RnEnz5Yh9ql6PQvilbuxNeGYr"
+    "apikey": "LJbZPxwGd6tVgUfD8A8RnEnz5Yh9ql6PQvilbuxNeGYr",
+    "url": "https://eu-de.ml.cloud.ibm.com"
 }
-model = ModelInference(api_key=wml_credentials["apikey"], project_id="ApiKey-330ce425-a309-4904-aa78-da0bd7199327")
+
+MODEL_ID = "ibm/granite-13b-chat-v2"
+PROJECT_ID = "123e4567-e89b-12d3-a456-426614174000"  
+
+model = ModelInference(
+    model_id=MODEL_ID,
+    credentials=wml_credentials,
+    project_id=PROJECT_ID
+)
 
 # ChromaDB Setup
 chroma_client = chromadb.PersistentClient(path="./chromadb_store")
@@ -34,7 +44,123 @@ def load_and_preprocess(file):
 
 def query_llm(category, data):
     """Query IBM Granite LLM with retrieved DNA data insights."""
-    prompt = f"Analyze the following DNA data under the category {category}: {data}"
+    
+    prompts = {
+        "Genomic Disorders": f"""
+        You are a genetic expert analyzing potential genomic disorders in a given DNA dataset.
+        
+        ### DNA Data:
+        {data}
+        
+        ### Instructions:
+        - Identify any gene mutations linked to known disorders.
+        - Explain the significance of these mutations.
+        - Highlight potential health risks associated with them.
+        - Reference genetic studies where applicable.
+
+        Provide results in an easy-to-understand format for non-experts.
+        """,
+
+        "Physical Characteristics": f"""
+        You are a genetics researcher analyzing DNA data to determine physical traits.
+
+        ### DNA Data:
+        {data}
+
+        ### Instructions:
+        - Identify genetic markers for physical traits (e.g., eye color, hair type, height).
+        - Explain how these markers influence phenotypic expression.
+        - Compare the findings with known genomic studies.
+
+        Provide an understandable summary.
+        """,
+
+        "Mental Characteristics": f"""
+        Analyze the following DNA data for potential cognitive traits and mental characteristics.
+
+        ### DNA Data:
+        {data}
+
+        ### Instructions:
+        - Identify gene markers associated with intelligence, memory, and cognitive functions.
+        - Explain potential genetic influences on mental abilities.
+        - Highlight any relevant studies supporting these findings.
+
+        Provide a scientifically sound but accessible response.
+        """,
+
+        "Personality": f"""
+        Analyze DNA data to predict potential personality traits.
+
+        ### DNA Data:
+        {data}
+
+        ### Instructions:
+        - Identify genetic variations linked to temperament and personality.
+        - Explain the impact of these genes on behavior.
+        - Discuss the role of genetics vs. environment.
+
+        Keep it evidence-based and objective.
+        """,
+
+        "Future Disease Risks": f"""
+        You are analyzing DNA data for potential future disease risks.
+
+        ### DNA Data:
+        {data}
+
+        ### Instructions:
+        - Identify genetic predispositions to common diseases (e.g., diabetes, heart disease, cancer).
+        - Explain how these genes increase or decrease risk.
+        - Provide preventive measures based on genetic findings.
+
+        Maintain clarity while ensuring scientific accuracy.
+        """,
+
+        "Ancestry & Heritage": f"""
+        Analyze DNA data to determine ancestry and heritage.
+
+        ### DNA Data:
+        {data}
+
+        ### Instructions:
+        - Compare genetic markers with global population databases.
+        - Identify potential ancestral origins.
+        - Explain how specific gene sequences are inherited.
+
+        Provide insights in a culturally sensitive manner.
+        """,
+
+        "Forensic DNA Insights": f"""
+        You are conducting a forensic analysis of DNA data.
+
+        ### DNA Data:
+        {data}
+
+        ### Instructions:
+        - Identify any forensic markers that can assist in identification.
+        - Explain potential familial connections or lineage.
+        - Highlight forensic applications of the findings.
+
+        Ensure a balanced and ethical analysis.
+        """,
+
+        "DNA Matching": f"""
+        Compare two DNA datasets to determine genetic relationships.
+
+        ### DNA Data 1:
+        {data}
+
+        ### Instructions:
+        - Identify shared genetic markers.
+        - Calculate the likelihood of biological relationships.
+        - Explain whether the individuals could be related (parent-child, siblings, distant relatives).
+
+        Use probability-based genetic analysis methods.
+        """
+    }
+
+    prompt = prompts.get(category, f"Analyze the following DNA data under the category {category}: {data}")
     response = model.generate_text(prompt)
     return response.text
 
@@ -84,8 +210,7 @@ def analyze_forensic_insights(state):
 
 def analyze_dna_matching(state, second_data):
     """Analyze relationship between two DNA datasets."""
-    prompt = f"Compare the following two DNA datasets and determine the relationship: {state.data} and {second_data}"
-    insights = model.generate_text(prompt).text
+    insights = query_llm("DNA Matching", f"{state.data} and {second_data}")
     state.results["DNA Matching"] = insights
     return state
 
@@ -120,44 +245,9 @@ if uploaded_file:
             result = graph.run(state)
             st.session_state["analysis_results"] = result.results
             st.success("Analysis completed!")
-    else:
-        st.error("Invalid file format.")
 
 if "analysis_results" in st.session_state:
     results = st.session_state["analysis_results"]
     for category, insight in results.items():
         with st.expander(f"{category}"):
             st.write(insight)
-
-    if st.button("Download Report as PDF"):
-        pdf = FPDF()
-        pdf.set_auto_page_break(auto=True, margin=15)
-        pdf.add_page()
-        pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, "DNA Analysis Report", ln=True, align="C")
-        for category, insight in results.items():
-            pdf.add_page()
-            pdf.cell(200, 10, category, ln=True, align="C")
-            pdf.multi_cell(0, 10, insight)
-        pdf_path = "DNA_Analysis_Report.pdf"
-        pdf.output(pdf_path)
-        with open(pdf_path, "rb") as f:
-            st.download_button("Download PDF", f, file_name=pdf_path, mime="application/pdf")
-
-st.header("DNA Matching")
-file1 = st.file_uploader("Upload First DNA Dataset", type=["csv", "xlsx", "txt"], key="file1")
-file2 = st.file_uploader("Upload Second DNA Dataset", type=["csv", "xlsx", "txt"], key="file2")
-
-if file1 and file2:
-    df1 = load_and_preprocess(file1)
-    df2 = load_and_preprocess(file2)
-    if df1 is not None and df2 is not None:
-        if st.button("Compare DNA"):
-            state = DNAAnalysisState(df1.to_json())
-            result = analyze_dna_matching(state, df2.to_json())
-            st.session_state["dna_matching_result"] = result.results["DNA Matching"]
-            st.success("DNA Matching completed!")
-
-if "dna_matching_result" in st.session_state:
-    st.subheader("DNA Matching Results")
-    st.write(st.session_state["dna_matching_result"])
