@@ -1,6 +1,3 @@
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 import streamlit as st
 import pandas as pd
 import chromadb
@@ -14,10 +11,10 @@ from fpdf import FPDF
 #############    PUT API KEY HERE     ####################
 ##########################################################
 wml_credentials = {
-    "url": "https://us-south.ml.cloud.ibm.com",
-    "apikey": "api_key"
+    "url": "https://eu-de.ml.cloud.ibm.com",
+    "apikey": "LJbZPxwGd6tVgUfD8A8RnEnz5Yh9ql6PQvilbuxNeGYr"
 }
-model = ModelInference(credentials=wml_credentials, project_id="project_id",model_id="model_id")
+model = ModelInference(api_key=wml_credentials["apikey"], project_id="ApiKey-330ce425-a309-4904-aa78-da0bd7199327")
 
 # ChromaDB Setup
 chroma_client = chromadb.PersistentClient(path="./chromadb_store")
