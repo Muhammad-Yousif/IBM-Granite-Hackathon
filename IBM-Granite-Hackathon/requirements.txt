@@ -4,5 +4,3 @@ chromadb
 ibm-watson-machine-learning
 fpdf
 openpyxl
-pysqlite3-binary
-langgraph
