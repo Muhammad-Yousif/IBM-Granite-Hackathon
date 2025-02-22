@@ -1,0 +1,6 @@
+streamlit
+pandas
+chromadb
+ibm-watson-machine-learning
+fpdf
+openpyxl
